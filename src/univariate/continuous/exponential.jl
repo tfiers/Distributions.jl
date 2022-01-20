@@ -48,6 +48,9 @@ rate(d::Exponential) = inv(d.θ)
 params(d::Exponential) = (d.θ,)
 partype(::Exponential{T}) where {T<:Number} = T
 
+units(d::Exponential) = units(d.θ)
+Base.eltype(::Type{Exponential{T}}) where {T} = T
+
 #### Statistics
 
 mean(d::Exponential) = d.θ
@@ -58,16 +61,16 @@ var(d::Exponential) = d.θ^2
 skewness(::Exponential{T}) where {T} = T(2)
 kurtosis(::Exponential{T}) where {T} = T(6)
 
-entropy(d::Exponential{T}) where {T} = one(T) + log(d.θ)
+entropy(d::Exponential{T}) where {T} = one(T) + log(dimensionless(d.θ / units(d)))
 
 function kldivergence(p::Exponential, q::Exponential)
     λq_over_λp = scale(q) / scale(p)
-    return -logmxp1(λq_over_λp)
+    return -logmxp1(dimensionless(λq_over_λp))
 end
 
 #### Evaluation
 
-zval(d::Exponential, x::Number) = max(x / d.θ, 0)
+zval(d::Exponential, x::Number) = max(dimensionless(x / d.θ), 0)
 xval(d::Exponential, z::Real) = z * d.θ
 
 function pdf(d::Exponential, x::Number)
@@ -77,7 +80,7 @@ function pdf(d::Exponential, x::Number)
 end
 function logpdf(d::Exponential, x::Number)
     λ = rate(d)
-    z = log(λ) - λ * x
+    z = log(dimensionless(λ * units(d))) - dimensionless(λ * x)
     return x < zero(x) ? oftype(z, -Inf) : z
 end
 
@@ -93,8 +96,8 @@ invlogccdf(d::Exponential, lp::Real) = -xval(d, lp)
 
 gradlogpdf(d::Exponential{T}, x::Number) where {T<:Number} = x > zero(x) ? -rate(d) : zero(T)
 
-mgf(d::Exponential, t::Number) = 1/(1 - t * scale(d))
-cf(d::Exponential, t::Number) = 1/(1 - t * im * scale(d))
+mgf(d::Exponential, t::Number) = 1/(1 - dimensionless(t * scale(d)))
+cf(d::Exponential, t::Number) = 1/(1 - im * dimensionless(t * scale(d)))
 
 
 #### Sampling

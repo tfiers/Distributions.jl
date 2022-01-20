@@ -277,6 +277,9 @@ include("common.jl")
 include("utils.jl")
 include("eachvariate.jl")
 
+# physical units support
+include("units.jl")
+
 # generic functions
 include("show.jl")
 include("quantilealgs.jl")
@@ -312,11 +315,6 @@ include("density_interface.jl")
 include("test_utils.jl")
 
 include("deprecates.jl")
-
-# Provide interop with other packages without requiring them as a dependency.
-function __init__()
-    @require Unitful="1986cc42-f94f-5a68-af5c-568840ba703d" include("unitful.jl")
-end
 
 """
 A Julia package for probability distributions and associated functions.
