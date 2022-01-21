@@ -11,7 +11,7 @@ const Units = Union{Unitful.Units, Real}
 
 Retrieve the physical [`Units`](@ref) of the distribution's variate.
 """
-units(::Distribution)::Units
+units(::Distribution)
 #   To be implemented by distributions wishing to support unitful variates.
 
 """
@@ -24,11 +24,11 @@ If `x` is dimensionless or has no units specified, this is `one(T)`, with `T <: 
 Note the difference with Unitful's [`unit`](https://painterqubits.github.io/Unitful.jl/stable/manipulations/#Unitful.unit),
 which returns the singleton `NoUnits` for non-Unitful types, instead of `one(T)`.
 """
-units(::Number)::Units
+units(::Number)
 
 units(::Quantity{T,D,U}) where {T,D,U} = U()
 units(::DimensionlessQuantity{T}) where T = one(T)
-units(::T) = one(T)
+units(::T) where T = one(T)
 
 """
     dimensionless(x::DimensionlessQuantity)
