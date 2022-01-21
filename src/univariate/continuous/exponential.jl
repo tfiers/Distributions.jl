@@ -21,12 +21,12 @@ External links
 * [Exponential distribution on Wikipedia](http://en.wikipedia.org/wiki/Exponential_distribution)
 
 """
-struct Exponential{T<:Number} <: ContinuousUnivariateDistribution
+struct Exponential{T<:Quantity} <: ContinuousUnivariateDistribution
     θ::T        # note: scale not rate
     Exponential{T}(θ::T) where {T} = new{T}(θ)
 end
 
-function Exponential(θ::Number; check_args::Bool=true)
+function Exponential(θ::Quantity; check_args::Bool=true)
     check_args && @check_args(Exponential, θ > zero(θ))
     return Exponential{typeof(θ)}(θ)
 end
@@ -34,11 +34,14 @@ end
 Exponential(θ::Integer; check_args::Bool=true) = Exponential(float(θ); check_args=check_args)
 Exponential() = Exponential{Float64}(1.0)
 
-@distr_support Exponential 0.0 Inf
+Base.eltype(::Type{Exponential{T}}) where {T} = T
+
+minimum(d::Exponential) = 0 * units(d)
+maximum(d::Exponential) = Inf * units(d)
 
 ### Conversions
-convert(::Type{Exponential{T}}, θ::S) where {T <: Number, S <: Number} = Exponential(T(θ))
-convert(::Type{Exponential{T}}, d::Exponential{S}) where {T <: Number, S <: Number} = Exponential(T(d.θ), check_args=false)
+convert(::Type{Exponential{T}}, θ::S) where {T <: Quantity, S <: Quantity} = Exponential(T(θ))
+convert(::Type{Exponential{T}}, d::Exponential{S}) where {T <: Quantity, S <: Quantity} = Exponential(T(d.θ), check_args=false)
 
 #### Parameters
 
@@ -47,8 +50,6 @@ rate(d::Exponential) = inv(d.θ)
 
 params(d::Exponential) = (d.θ,)
 partype(::Exponential{T}) where {T} = T
-
-Base.eltype(::Type{Exponential{T}}) where {T} = T
 
 #### Statistics
 
@@ -69,34 +70,34 @@ end
 
 #### Evaluation
 
-zval(d::Exponential, x::Number) = max(dimensionless(x / d.θ), 0)
+zval(d::Exponential, x::Quantity) = max(dimensionless(x / d.θ), 0)
 xval(d::Exponential, z::Real) = z * d.θ
 
-function pdf(d::Exponential, x::Number)
+function pdf(d::Exponential, x::Quantity)
     λ = rate(d)
     z = λ * exp(-λ * max(x, zero(x)))
     return x < zero(x) ? zero(z) : z
 end
-function logpdf(d::Exponential, x::Number)
+function logpdf(d::Exponential, x::Quantity)
     λ = rate(d)
     z = log(dimensionless(λ * units(d))) - dimensionless(λ * x)
     return x < zero(x) ? oftype(z, -Inf) : z
 end
 
-cdf(d::Exponential, x::Number) = -expm1(-zval(d, x))
-ccdf(d::Exponential, x::Number) = exp(-zval(d, x))
-logcdf(d::Exponential, x::Number) = log1mexp(-zval(d, x))
-logccdf(d::Exponential, x::Number) = -zval(d, x)
+cdf(d::Exponential, x::Quantity) = -expm1(-zval(d, x))
+ccdf(d::Exponential, x::Quantity) = exp(-zval(d, x))
+logcdf(d::Exponential, x::Quantity) = log1mexp(-zval(d, x))
+logccdf(d::Exponential, x::Quantity) = -zval(d, x)
 
 quantile(d::Exponential, p::Real) = -xval(d, log1p(-p))
 cquantile(d::Exponential, p::Real) = -xval(d, log(p))
 invlogcdf(d::Exponential, lp::Real) = -xval(d, log1mexp(lp))
 invlogccdf(d::Exponential, lp::Real) = -xval(d, lp)
 
-gradlogpdf(d::Exponential{T}, x::Number) where {T} = x > zero(x) ? -rate(d) : zero(T)
+gradlogpdf(d::Exponential{T}, x::Quantity) where {T} = x > zero(x) ? -rate(d) : zero(T)
 
-mgf(d::Exponential, t::Number) = 1/(1 - dimensionless(t * scale(d)))
-cf(d::Exponential, t::Number) = 1/(1 - im * dimensionless(t * scale(d)))
+mgf(d::Exponential, t::Quantity) = 1/(1 - dimensionless(t * scale(d)))
+cf(d::Exponential, t::Quantity) = 1/(1 - im * dimensionless(t * scale(d)))
 
 
 #### Sampling
@@ -106,13 +107,13 @@ rand(rng::AbstractRNG, d::Exponential) = xval(d, randexp(rng))
 #### Fit model
 
 struct ExponentialStats <: SufficientStats
-    sx::Number   # (weighted) sum of x
+    sx::Quantity   # (weighted) sum of x
     sw::Float64   # sum of sample weights
 
-    ExponentialStats(sx::Number, sw::Real) = new(sx, sw)
+    ExponentialStats(sx::Quantity, sw::Real) = new(sx, sw)
 end
 
-suffstats(::Type{<:Exponential}, x::AbstractArray{<:Number}) = ExponentialStats(sum(x), length(x))
-suffstats(::Type{<:Exponential}, x::AbstractArray{<:Number}, w::AbstractArray{Float64}) = ExponentialStats(dot(x, w), sum(w))
+suffstats(::Type{<:Exponential}, x::AbstractArray{<:Quantity}) = ExponentialStats(sum(x), length(x))
+suffstats(::Type{<:Exponential}, x::AbstractArray{<:Quantity}, w::AbstractArray{Float64}) = ExponentialStats(dot(x, w), sum(w))
 
 fit_mle(::Type{<:Exponential}, ss::ExponentialStats) = Exponential(ss.sx / ss.sw)

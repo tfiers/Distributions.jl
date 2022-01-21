@@ -1,21 +1,21 @@
 #### Domain && Support
 
-struct RealInterval{T<:Real}
+struct RealInterval{T<:Quantity}
     lb::T
     ub::T
 end
 
-RealInterval(lb::Real, ub::Real) = RealInterval(promote(lb, ub)...)
+RealInterval(lb::Quantity, ub::Quantity) = RealInterval(promote(lb, ub)...)
 
 minimum(r::RealInterval) = r.lb
 maximum(r::RealInterval) = r.ub
 extrema(r::RealInterval) = (r.lb, r.ub)
-in(x::Real, r::RealInterval) = r.lb <= x <= r.ub
+in(x::Quantity, r::RealInterval) = r.lb <= x <= r.ub
 
 isbounded(d::Union{D,Type{D}}) where {D<:UnivariateDistribution} = isupperbounded(d) && islowerbounded(d)
 
-islowerbounded(d::Union{D,Type{D}}) where {D<:UnivariateDistribution} = minimum(d) > -Inf
-isupperbounded(d::Union{D,Type{D}}) where {D<:UnivariateDistribution} = maximum(d) < +Inf
+islowerbounded(d::Union{D,Type{D}}) where {D<:UnivariateDistribution} = minimum(d) > -Inf * units(d)
+isupperbounded(d::Union{D,Type{D}}) where {D<:UnivariateDistribution} = maximum(d) < +Inf * units(d)
 
 hasfinitesupport(d::Union{D,Type{D}}) where {D<:DiscreteUnivariateDistribution} = isbounded(d)
 hasfinitesupport(d::Union{D,Type{D}}) where {D<:ContinuousUnivariateDistribution} = false
