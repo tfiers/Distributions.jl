@@ -1,34 +1,16 @@
 # Variates and distribution parameters with physical dimensions.
-# 
-# See `units.md` in the docs.
 
 using Unitful: Unitful, Quantity, DimensionlessQuantity, NoUnits
-
-const Units = Union{Unitful.Units, Real}
 
 """
     units(d::Distribution)
 
-Retrieve the physical [`Units`](@ref) of the distribution's variate.
+Retrieve the physical units of the distribution's variate. If the distribution does not have
+units attached (*i.e.* it is over real values), this is simply `1` or `1.0`. In general,
+`units(::Distribution{T}) == oneunit(T)` (see [`Base.oneunit`](https://docs.julialang.org/en/v1/base/numbers/#Base.oneunit)),
+or, if the user has specified a custom units scale, `units(d::Distribution) == d.units`.
 """
-units(::Distribution)
-#   To be implemented by distributions wishing to support unitful variates.
-
-"""
-    units(x::Number)
-
-Retrieve the physical [`Units`](@ref) of a variate or parameter.
-If `x` is dimensionless or has no units specified, this is `one(T)`, with `T <: Real`
-(*i.e.* `1`, `1.0`, …).
-
-Note the difference with Unitful's [`unit`](https://painterqubits.github.io/Unitful.jl/stable/manipulations/#Unitful.unit),
-which returns the singleton `NoUnits` for non-Unitful types, instead of `one(T)`.
-"""
-units(::Number)
-
-units(::Quantity{T,D,U}) where {T,D,U} = U()
-units(::DimensionlessQuantity{T}) where T = one(T)
-units(::T) where T = one(T)
+units(d::D) where {D <: Distribution} = hasfield(D, :units) ? d.units : oneunit(eltype(D))
 
 """
     dimensionless(x::DimensionlessQuantity)

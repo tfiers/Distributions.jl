@@ -46,16 +46,15 @@ scale(d::Exponential) = d.θ
 rate(d::Exponential) = inv(d.θ)
 
 params(d::Exponential) = (d.θ,)
-partype(::Exponential{T}) where {T<:Number} = T
+partype(::Exponential{T}) where {T} = T
 
-units(d::Exponential) = units(d.θ)
 Base.eltype(::Type{Exponential{T}}) where {T} = T
 
 #### Statistics
 
 mean(d::Exponential) = d.θ
 median(d::Exponential) = logtwo * d.θ
-mode(::Exponential{T}) where {T<:Number} = zero(T)
+mode(::Exponential{T}) where {T} = zero(T)
 
 var(d::Exponential) = d.θ^2
 skewness(::Exponential{T}) where {T} = T(2)
@@ -94,7 +93,7 @@ cquantile(d::Exponential, p::Real) = -xval(d, log(p))
 invlogcdf(d::Exponential, lp::Real) = -xval(d, log1mexp(lp))
 invlogccdf(d::Exponential, lp::Real) = -xval(d, lp)
 
-gradlogpdf(d::Exponential{T}, x::Number) where {T<:Number} = x > zero(x) ? -rate(d) : zero(T)
+gradlogpdf(d::Exponential{T}, x::Number) where {T} = x > zero(x) ? -rate(d) : zero(T)
 
 mgf(d::Exponential, t::Number) = 1/(1 - dimensionless(t * scale(d)))
 cf(d::Exponential, t::Number) = 1/(1 - im * dimensionless(t * scale(d)))
@@ -113,7 +112,7 @@ struct ExponentialStats <: SufficientStats
     ExponentialStats(sx::Number, sw::Real) = new(sx, sw)
 end
 
-suffstats(::Type{<:Exponential}, x::AbstractArray{T}) where {T<:Number} = ExponentialStats(sum(x), length(x))
-suffstats(::Type{<:Exponential}, x::AbstractArray{T}, w::AbstractArray{Float64}) where {T<:Number} = ExponentialStats(dot(x, w), sum(w))
+suffstats(::Type{<:Exponential}, x::AbstractArray{<:Number}) = ExponentialStats(sum(x), length(x))
+suffstats(::Type{<:Exponential}, x::AbstractArray{<:Number}, w::AbstractArray{Float64}) = ExponentialStats(dot(x, w), sum(w))
 
 fit_mle(::Type{<:Exponential}, ss::ExponentialStats) = Exponential(ss.sx / ss.sw)
