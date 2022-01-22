@@ -2,7 +2,7 @@
 
 using Unitful: Unitful, NoDims, NoUnits, unit
 
-const Quantity = Union{Real, Unitful.Quantity{<:Real}}
+const RealQuantity = Union{Real, Unitful.Quantity{<:Real}}
 
 """
     unit(d::Distribution)
@@ -13,7 +13,7 @@ units attached (*i.e.* it is over real values), this is simply `1` or `1.0`. In 
 or, if the user has specified a custom unit scale, `unit(d::Distribution) == d.unit`.
 
 Note that where `Unitful.unit` returns a `Unitful.Units`, `Distributions.unit` returns a
-`Quantity`:
+`RealQuantity`:
 ```julia
 unit(8mV)              == mV
 unit(Exponential(8mV)) == 1mV

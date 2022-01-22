@@ -21,12 +21,12 @@ External links
 * [Exponential distribution on Wikipedia](http://en.wikipedia.org/wiki/Exponential_distribution)
 
 """
-struct Exponential{T<:Quantity} <: ContinuousUnivariateDistribution
+struct Exponential{T<:RealQuantity} <: ContinuousUnivariateDistribution
     θ::T        # note: scale not rate
     Exponential{T}(θ::T) where {T} = new{T}(θ)
 end
 
-function Exponential(θ::Quantity; check_args::Bool=true)
+function Exponential(θ::RealQuantity; check_args::Bool=true)
     check_args && @check_args(Exponential, θ > zero(θ))
     return Exponential{typeof(θ)}(θ)
 end
@@ -40,8 +40,8 @@ minimum(d::Exponential) = 0 * unit(d)
 maximum(d::Exponential) = Inf * unit(d)
 
 ### Conversions
-convert(::Type{Exponential{T}}, θ::S) where {T <: Quantity, S <: Quantity} = Exponential(T(θ))
-convert(::Type{Exponential{T}}, d::Exponential{S}) where {T <: Quantity, S <: Quantity} = Exponential(T(d.θ), check_args=false)
+convert(::Type{Exponential{T}}, θ::S) where {T <: RealQuantity, S <: RealQuantity} = Exponential(T(θ))
+convert(::Type{Exponential{T}}, d::Exponential{S}) where {T <: RealQuantity, S <: RealQuantity} = Exponential(T(d.θ), check_args=false)
 
 #### Parameters
 
@@ -70,34 +70,34 @@ end
 
 #### Evaluation
 
-zval(d::Exponential, x::Quantity) = max(dimensionless(x / d.θ), 0)
+zval(d::Exponential, x::RealQuantity) = max(dimensionless(x / d.θ), 0)
 xval(d::Exponential, z::Real) = z * d.θ
 
-function pdf(d::Exponential, x::Quantity)
+function pdf(d::Exponential, x::RealQuantity)
     λ = rate(d)
     z = λ * exp(-λ * max(x, zero(x)))
     return x < zero(x) ? zero(z) : z
 end
-function logpdf(d::Exponential, x::Quantity)
+function logpdf(d::Exponential, x::RealQuantity)
     λ = rate(d)
     z = log(dimensionless(λ * unit(d))) - dimensionless(λ * x)
     return x < zero(x) ? oftype(z, -Inf) : z
 end
 
-cdf(d::Exponential, x::Quantity) = -expm1(-zval(d, x))
-ccdf(d::Exponential, x::Quantity) = exp(-zval(d, x))
-logcdf(d::Exponential, x::Quantity) = log1mexp(-zval(d, x))
-logccdf(d::Exponential, x::Quantity) = -zval(d, x)
+cdf(d::Exponential, x::RealQuantity) = -expm1(-zval(d, x))
+ccdf(d::Exponential, x::RealQuantity) = exp(-zval(d, x))
+logcdf(d::Exponential, x::RealQuantity) = log1mexp(-zval(d, x))
+logccdf(d::Exponential, x::RealQuantity) = -zval(d, x)
 
 quantile(d::Exponential, p::Real) = -xval(d, log1p(-p))
 cquantile(d::Exponential, p::Real) = -xval(d, log(p))
 invlogcdf(d::Exponential, lp::Real) = -xval(d, log1mexp(lp))
 invlogccdf(d::Exponential, lp::Real) = -xval(d, lp)
 
-gradlogpdf(d::Exponential, x::Quantity) = x > zero(x) ? -rate(d) : 0/unit(d)
+gradlogpdf(d::Exponential, x::RealQuantity) = x > zero(x) ? -rate(d) : 0/unit(d)
 
-mgf(d::Exponential, t::Quantity) = 1/(1 - dimensionless(t * scale(d)))
-cf(d::Exponential, t::Quantity) = 1/(1 - im * dimensionless(t * scale(d)))
+mgf(d::Exponential, t::RealQuantity) = 1/(1 - dimensionless(t * scale(d)))
+cf(d::Exponential, t::RealQuantity) = 1/(1 - im * dimensionless(t * scale(d)))
 
 
 #### Sampling
@@ -107,13 +107,13 @@ rand(rng::AbstractRNG, d::Exponential) = xval(d, randexp(rng))
 #### Fit model
 
 struct ExponentialStats <: SufficientStats
-    sx::Quantity   # (weighted) sum of x
+    sx::RealQuantity   # (weighted) sum of x
     sw::Float64   # sum of sample weights
 
-    ExponentialStats(sx::Quantity, sw::Real) = new(sx, sw)
+    ExponentialStats(sx::RealQuantity, sw::Real) = new(sx, sw)
 end
 
-suffstats(::Type{<:Exponential}, x::AbstractArray{<:Quantity}) = ExponentialStats(sum(x), length(x))
-suffstats(::Type{<:Exponential}, x::AbstractArray{<:Quantity}, w::AbstractArray{Float64}) = ExponentialStats(dot(x, w), sum(w))
+suffstats(::Type{<:Exponential}, x::AbstractArray{<:RealQuantity}) = ExponentialStats(sum(x), length(x))
+suffstats(::Type{<:Exponential}, x::AbstractArray{<:RealQuantity}, w::AbstractArray{Float64}) = ExponentialStats(dot(x, w), sum(w))
 
 fit_mle(::Type{<:Exponential}, ss::ExponentialStats) = Exponential(ss.sx / ss.sw)
