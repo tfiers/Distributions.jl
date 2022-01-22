@@ -36,8 +36,8 @@ Exponential() = Exponential{Float64}(1.0)
 
 Base.eltype(::Type{Exponential{T}}) where {T} = T
 
-minimum(d::Exponential) = 0 * units(d)
-maximum(d::Exponential) = Inf * units(d)
+minimum(d::Exponential) = 0 * unit(d)
+maximum(d::Exponential) = Inf * unit(d)
 
 ### Conversions
 convert(::Type{Exponential{T}}, θ::S) where {T <: Quantity, S <: Quantity} = Exponential(T(θ))
@@ -61,7 +61,7 @@ var(d::Exponential) = d.θ^2
 skewness(::Exponential{T}) where {T} = T(2)
 kurtosis(::Exponential{T}) where {T} = T(6)
 
-entropy(d::Exponential{T}) where {T} = one(T) + log(dimensionless(d.θ / units(d)))
+entropy(d::Exponential{T}) where {T} = one(T) + log(dimensionless(d.θ / unit(d)))
 
 function kldivergence(p::Exponential, q::Exponential)
     λq_over_λp = scale(q) / scale(p)
@@ -80,7 +80,7 @@ function pdf(d::Exponential, x::Quantity)
 end
 function logpdf(d::Exponential, x::Quantity)
     λ = rate(d)
-    z = log(dimensionless(λ * units(d))) - dimensionless(λ * x)
+    z = log(dimensionless(λ * unit(d))) - dimensionless(λ * x)
     return x < zero(x) ? oftype(z, -Inf) : z
 end
 
@@ -94,7 +94,7 @@ cquantile(d::Exponential, p::Real) = -xval(d, log(p))
 invlogcdf(d::Exponential, lp::Real) = -xval(d, log1mexp(lp))
 invlogccdf(d::Exponential, lp::Real) = -xval(d, lp)
 
-gradlogpdf(d::Exponential{T}, x::Quantity) where {T} = x > zero(x) ? -rate(d) : zero(T)
+gradlogpdf(d::Exponential, x::Quantity) = x > zero(x) ? -rate(d) : 0/unit(d)
 
 mgf(d::Exponential, t::Quantity) = 1/(1 - dimensionless(t * scale(d)))
 cf(d::Exponential, t::Quantity) = 1/(1 - im * dimensionless(t * scale(d)))

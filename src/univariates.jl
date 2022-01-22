@@ -14,8 +14,8 @@ in(x::Quantity, r::RealInterval) = r.lb <= x <= r.ub
 
 isbounded(d::Union{D,Type{D}}) where {D<:UnivariateDistribution} = isupperbounded(d) && islowerbounded(d)
 
-islowerbounded(d::Union{D,Type{D}}) where {D<:UnivariateDistribution} = minimum(d) > -Inf * units(d)
-isupperbounded(d::Union{D,Type{D}}) where {D<:UnivariateDistribution} = maximum(d) < +Inf * units(d)
+islowerbounded(d::Union{D,Type{D}}) where {D<:UnivariateDistribution} = minimum(d) / unit(d) > -Inf
+isupperbounded(d::Union{D,Type{D}}) where {D<:UnivariateDistribution} = maximum(d) / unit(d) < +Inf
 
 hasfinitesupport(d::Union{D,Type{D}}) where {D<:DiscreteUnivariateDistribution} = isbounded(d)
 hasfinitesupport(d::Union{D,Type{D}}) where {D<:ContinuousUnivariateDistribution} = false
@@ -105,8 +105,8 @@ end
 insupport(d::Union{D,Type{D}}, X::AbstractArray) where {D<:UnivariateDistribution} =
      insupport!(BitArray(undef, size(X)), d, X)
 
-insupport(d::Union{D,Type{D}},x::Real) where {D<:ContinuousUnivariateDistribution} = minimum(d) <= x <= maximum(d)
-insupport(d::Union{D,Type{D}},x::Real) where {D<:DiscreteUnivariateDistribution} = isinteger(x) && minimum(d) <= x <= maximum(d)
+insupport(d::Union{D,Type{D}},x::Quantity) where {D<:ContinuousUnivariateDistribution} = minimum(d) <= x <= maximum(d)
+insupport(d::Union{D,Type{D}},x::Quantity) where {D<:DiscreteUnivariateDistribution} = isinteger(x) && minimum(d) <= x <= maximum(d)
 
 support(d::Union{D,Type{D}}) where {D<:ContinuousUnivariateDistribution} = RealInterval(minimum(d), maximum(d))
 support(d::Union{D,Type{D}}) where {D<:DiscreteUnivariateDistribution} = round(Int, minimum(d)):round(Int, maximum(d))
@@ -138,11 +138,11 @@ end
 # multiple univariate with pre-allocated array
 # we use a function barrier since for some distributions `sampler(s)` is not type-stable:
 # https://github.com/JuliaStats/Distributions.jl/pull/1281
-function rand!(rng::AbstractRNG, s::Sampleable{Univariate}, A::AbstractArray{<:Real})
+function rand!(rng::AbstractRNG, s::Sampleable{Univariate}, A::AbstractArray{<:Quantity})
     return _rand!(rng, sampler(s), A)
 end
 
-function _rand!(rng::AbstractRNG, sampler::Sampleable{Univariate}, A::AbstractArray{<:Real})
+function _rand!(rng::AbstractRNG, sampler::Sampleable{Univariate}, A::AbstractArray{<:Quantity})
     for i in eachindex(A)
         @inbounds A[i] = rand(rng, sampler)
     end
@@ -287,67 +287,67 @@ cf(d::UnivariateDistribution, t)
 # pdf
 
 """
-    pdf(d::UnivariateDistribution, x::Real)
+    pdf(d::UnivariateDistribution, x::Quantity)
 
 Evaluate the probability density (mass) at `x`.
 
 See also: [`logpdf`](@ref).
 """
-pdf(d::UnivariateDistribution, x::Real) = exp(logpdf(d, x))
+pdf(d::UnivariateDistribution, x::Quantity) = exp(logpdf(d, x))
 
 # extract value from array of zero dimension
-_pdf(d::UnivariateDistribution, x::AbstractArray{<:Real,0}) = pdf(d, first(x))
+_pdf(d::UnivariateDistribution, x::AbstractArray{<:Quantity,0}) = pdf(d, first(x))
 
 """
-    logpdf(d::UnivariateDistribution, x::Real)
+    logpdf(d::UnivariateDistribution, x::Quantity)
 
 Evaluate the logarithm of probability density (mass) at `x`.
 
 See also: [`pdf`](@ref).
 """
-logpdf(d::UnivariateDistribution, x::Real)
+logpdf(d::UnivariateDistribution, x::Quantity)
 
 # extract value from array of zero dimension
-_logpdf(d::UnivariateDistribution, x::AbstractArray{<:Real,0}) = logpdf(d, first(x))
+_logpdf(d::UnivariateDistribution, x::AbstractArray{<:Quantity,0}) = logpdf(d, first(x))
 
-# loglikelihood for `Real`
-Base.@propagate_inbounds loglikelihood(d::UnivariateDistribution, x::Real) = logpdf(d, x)
+# loglikelihood for `Quantity`
+Base.@propagate_inbounds loglikelihood(d::UnivariateDistribution, x::Quantity) = logpdf(d, x)
 
 """
-    cdf(d::UnivariateDistribution, x::Real)
+    cdf(d::UnivariateDistribution, x::Quantity)
 
 Evaluate the cumulative probability at `x`.
 
 See also [`ccdf`](@ref), [`logcdf`](@ref), and [`logccdf`](@ref).
 """
-cdf(d::UnivariateDistribution, x::Real)
+cdf(d::UnivariateDistribution, x::Quantity)
 
 # fallback for discrete distribution:
 # base computation on `cdf(d, floor(Int, x))` and handle `NaN` and `±Inf`
 # this is only correct for distributions with integer-valued support but will error if
 # `cdf(d, ::Int)` is not defined (so it should not return incorrect values silently)
-cdf(d::DiscreteUnivariateDistribution, x::Real) = cdf_int(d, x)
+cdf(d::DiscreteUnivariateDistribution, x::Quantity) = cdf_int(d, x)
 
 """
-    ccdf(d::UnivariateDistribution, x::Real)
+    ccdf(d::UnivariateDistribution, x::Quantity)
 
 The complementary cumulative function evaluated at `x`, i.e. `1 - cdf(d, x)`.
 """
-ccdf(d::UnivariateDistribution, x::Real) = 1 - cdf(d, x)
+ccdf(d::UnivariateDistribution, x::Quantity) = 1 - cdf(d, x)
 
 """
-    logcdf(d::UnivariateDistribution, x::Real)
+    logcdf(d::UnivariateDistribution, x::Quantity)
 
 The logarithm of the cumulative function value(s) evaluated at `x`, i.e. `log(cdf(x))`.
 """
-logcdf(d::UnivariateDistribution, x::Real) = log(cdf(d, x))
+logcdf(d::UnivariateDistribution, x::Quantity) = log(cdf(d, x))
 
 """
-    logdiffcdf(d::UnivariateDistribution, x::Real, y::Real)
+    logdiffcdf(d::UnivariateDistribution, x::Quantity, y::Quantity)
 
 The natural logarithm of the difference between the cumulative density function at `x` and `y`, i.e. `log(cdf(x) - cdf(y))`.
 """
-function logdiffcdf(d::UnivariateDistribution, x::Real, y::Real)
+function logdiffcdf(d::UnivariateDistribution, x::Quantity, y::Quantity)
     # Promote to ensure that we don't compute logcdf in low precision and then promote
     _x, _y = promote(x, y)
     _x < _y && throw(ArgumentError("requires x >= y."))
@@ -357,11 +357,11 @@ function logdiffcdf(d::UnivariateDistribution, x::Real, y::Real)
 end
 
 """
-    logccdf(d::UnivariateDistribution, x::Real)
+    logccdf(d::UnivariateDistribution, x::Quantity)
 
 The logarithm of the complementary cumulative function values evaluated at x, i.e. `log(ccdf(x))`.
 """
-logccdf(d::UnivariateDistribution, x::Real) = log(ccdf(d, x))
+logccdf(d::UnivariateDistribution, x::Quantity) = log(ccdf(d, x))
 
 """
     quantile(d::UnivariateDistribution, q::Real)
@@ -395,7 +395,7 @@ invlogccdf(d::UnivariateDistribution, lp::Real) = quantile(d, -expm1(lp))
 
 # gradlogpdf
 
-gradlogpdf(d::ContinuousUnivariateDistribution, x::Real) = throw(MethodError(gradlogpdf, (d, x)))
+gradlogpdf(d::ContinuousUnivariateDistribution, x::Quantity) = throw(MethodError(gradlogpdf, (d, x)))
 
 
 function _pdf_fill_outside!(r::AbstractArray, d::DiscreteUnivariateDistribution, X::UnitRange)
@@ -468,7 +468,7 @@ end
 
 ### special definitions for distributions with integer-valued support
 
-function cdf_int(d::DiscreteUnivariateDistribution, x::Real)
+function cdf_int(d::DiscreteUnivariateDistribution, x::Quantity)
     # handle `NaN` and `±Inf` which can't be truncated to `Int`
     isfinite_x = isfinite(x)
     _x = isfinite_x ? x : zero(x)
@@ -484,7 +484,7 @@ function cdf_int(d::DiscreteUnivariateDistribution, x::Real)
     end
 end
 
-function ccdf_int(d::DiscreteUnivariateDistribution, x::Real)
+function ccdf_int(d::DiscreteUnivariateDistribution, x::Quantity)
     # handle `NaN` and `±Inf` which can't be truncated to `Int`
     isfinite_x = isfinite(x)
     _x = isfinite_x ? x : zero(x)
@@ -500,7 +500,7 @@ function ccdf_int(d::DiscreteUnivariateDistribution, x::Real)
     end
 end
 
-function logcdf_int(d::DiscreteUnivariateDistribution, x::Real)
+function logcdf_int(d::DiscreteUnivariateDistribution, x::Quantity)
     # handle `NaN` and `±Inf` which can't be truncated to `Int`
     isfinite_x = isfinite(x)
     _x = isfinite_x ? x : zero(x)
@@ -516,7 +516,7 @@ function logcdf_int(d::DiscreteUnivariateDistribution, x::Real)
     end
 end
 
-function logccdf_int(d::DiscreteUnivariateDistribution, x::Real)
+function logccdf_int(d::DiscreteUnivariateDistribution, x::Quantity)
     # handle `NaN` and `±Inf` which can't be truncated to `Int`
     isfinite_x = isfinite(x)
     _x = isfinite_x ? x : zero(x)
@@ -613,16 +613,16 @@ macro _delegate_statsfuns(D, fpre, psyms...)
     pargs = [Expr(:(.), :d, Expr(:quote, s)) for s in psyms]
 
     # output type of `quantile` etc.
-    T = :($D <: DiscreteUnivariateDistribution ? Int : Real)
+    T = :(eltype($D))
 
     return quote
-        $Distributions.pdf(d::$D, x::Real) = $(fpdf)($(pargs...), x)
-        $Distributions.logpdf(d::$D, x::Real) = $(flogpdf)($(pargs...), x)
+        $Distributions.pdf(d::$D, x::Quantity) = $(fpdf)($(pargs...), x)
+        $Distributions.logpdf(d::$D, x::Quantity) = $(flogpdf)($(pargs...), x)
 
-        $Distributions.cdf(d::$D, x::Real) = $(fcdf)($(pargs...), x)
-        $Distributions.logcdf(d::$D, x::Real) = $(flogcdf)($(pargs...), x)
-        $Distributions.ccdf(d::$D, x::Real) = $(fccdf)($(pargs...), x)
-        $Distributions.logccdf(d::$D, x::Real) = $(flogccdf)($(pargs...), x)
+        $Distributions.cdf(d::$D, x::Quantity) = $(fcdf)($(pargs...), x)
+        $Distributions.logcdf(d::$D, x::Quantity) = $(flogcdf)($(pargs...), x)
+        $Distributions.ccdf(d::$D, x::Quantity) = $(fccdf)($(pargs...), x)
+        $Distributions.logccdf(d::$D, x::Quantity) = $(flogccdf)($(pargs...), x)
 
         $Distributions.quantile(d::$D, q::Real) = convert($T, $(finvcdf)($(pargs...), q))
         $Distributions.cquantile(d::$D, q::Real) = convert($T, $(finvccdf)($(pargs...), q))

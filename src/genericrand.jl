@@ -83,7 +83,7 @@ end
 @inline function rand!(
     rng::AbstractRNG,
     s::Sampleable{ArrayLikeVariate{N}},
-    x::AbstractArray{<:Real,N},
+    x::AbstractArray{<:Quantity,N},
 ) where {N}
     @boundscheck begin
         size(x) == size(s) || throw(DimensionMismatch("inconsistent array dimensions"))
@@ -94,7 +94,7 @@ end
 @inline function rand!(
     rng::AbstractRNG,
     s::Sampleable{ArrayLikeVariate{N}},
-    x::AbstractArray{<:Real,M},
+    x::AbstractArray{<:Quantity,M},
 ) where {N,M}
     @boundscheck begin
         M > N ||
@@ -111,7 +111,7 @@ end
 function _rand!(
     rng::AbstractRNG,
     s::Sampleable{<:ArrayLikeVariate},
-    x::AbstractArray{<:Real},
+    x::AbstractArray{<:Quantity},
 )
     @inbounds for xi in eachvariate(x, variate_form(typeof(s)))
         rand!(rng, s, xi)
@@ -122,7 +122,7 @@ end
 Base.@propagate_inbounds function rand!(
     rng::AbstractRNG,
     s::Sampleable{ArrayLikeVariate{N}},
-    x::AbstractArray{<:AbstractArray{<:Real,N}},
+    x::AbstractArray{<:AbstractArray{<:Quantity,N}},
 ) where {N}
     sz = size(s)
     allocate = !all(isassigned(x, i) && size(@inbounds x[i]) == sz for i in eachindex(x))
@@ -131,7 +131,7 @@ end
 
 Base.@propagate_inbounds function rand!(
     s::Sampleable{ArrayLikeVariate{N}},
-    x::AbstractArray{<:AbstractArray{<:Real,N}},
+    x::AbstractArray{<:AbstractArray{<:Quantity,N}},
     allocate::Bool,
 ) where {N}
     return rand!(GLOBAL_RNG, s, x, allocate)
@@ -139,7 +139,7 @@ end
 @inline function rand!(
     rng::AbstractRNG,
     s::Sampleable{ArrayLikeVariate{N}},
-    x::AbstractArray{<:AbstractArray{<:Real,N}},
+    x::AbstractArray{<:AbstractArray{<:Quantity,N}},
     allocate::Bool,
 ) where {N}
     @boundscheck begin
@@ -156,7 +156,7 @@ end
 function _rand!(
     rng::AbstractRNG,
     s::Sampleable{ArrayLikeVariate{N}},
-    x::AbstractArray{<:AbstractArray{<:Real,N}},
+    x::AbstractArray{<:AbstractArray{<:Quantity,N}},
     allocate::Bool,
 ) where {N}
     if allocate

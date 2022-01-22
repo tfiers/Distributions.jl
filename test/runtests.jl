@@ -72,6 +72,7 @@ const tests = [
     "reshaped",
     "skewedexponentialpower",
     "discreteuniform",
+    "units",
 ]
 
 printstyled("Running tests:\n", color=:blue)

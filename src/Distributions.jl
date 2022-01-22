@@ -259,7 +259,6 @@ export
     succprob,           # the success probability
     support,            # the support of a distribution (or a distribution type)
     truncated,          # truncate a distribution with a lower and upper bound
-    units,              # physical units of distribution's variate
     var,                # variance of distribution
     varlogx,            # variance of log(x)
     expected_logdet,    # expected logarithm of random matrix determinant
