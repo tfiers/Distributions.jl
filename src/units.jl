@@ -2,27 +2,18 @@
 
 using Unitful: Unitful, NoDims, NoUnits, unit
 
-const RealQuantity = Union{Real, Unitful.Quantity{<:Real}}
+const RealQuantity{T} = Union{T, Unitful.Quantity{<:T}} where {T <: Real}
 
 """
     unit(d::Distribution)
 
-Retrieve the physical unit scale of the distribution. If the distribution does not have
-units attached (*i.e.* it is over real values), this is simply `1` or `1.0`. In general,
-`unit(::Distribution{T}) == oneunit(T)` (see [`Base.oneunit`](https://docs.julialang.org/en/v1/base/numbers/#Base.oneunit)),
-or, if the user has specified a custom unit scale, `unit(d::Distribution) == d.unit`.
-
-Note that where `unit(::Number)` returns a `Unitful.Units`, `unit(::Distribution)` returns a
-`RealQuantity`:
-```julia
-unit(8mV) == mV
-unit(8)   == NoUnits
-unit(Exponential(8mV)) == 1mV
-unit(Exponential(8))   == 1
-```
+Retrieve the physical units of the distribution's variate. If the distribution does not have
+units attached (*i.e.* it is over real values), this is `Unitful.NoUnits`, which is a 0-size
+singleton that gets pruned away in mathematical expressions at compile-time. If the
+distribution does have units attached, this is either `unit(eltype(d))`, if the units are
+implicit from the distribution's parameters; or `d.unit` if not.
 """
-Unitful.unit(d::D) where {D <: Distribution} = 
-    hasfield(D, :unit) ? d.unit : oneunit(eltype(D))
+Unitful.unit(d::D) where {D <: Distribution} = hasfield(D, :unit) ? d.unit : unit(eltype(D))
 
 """
     dimensionless(x)
