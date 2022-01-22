@@ -12,17 +12,17 @@ units attached (*i.e.* it is over real values), this is simply `1` or `1.0`. In 
 `unit(::Distribution{T}) == oneunit(T)` (see [`Base.oneunit`](https://docs.julialang.org/en/v1/base/numbers/#Base.oneunit)),
 or, if the user has specified a custom unit scale, `unit(d::Distribution) == d.unit`.
 
-Note that where `Unitful.unit` returns a `Unitful.Units`, `Distributions.unit` returns a
+Note that where `unit(::Number)` returns a `Unitful.Units`, `unit(::Distribution)` returns a
 `RealQuantity`:
 ```julia
-unit(8mV)              == mV
+unit(8mV) == mV
+unit(8)   == NoUnits
 unit(Exponential(8mV)) == 1mV
-unit(8)              == NoUnits
-unit(Exponential(8)) == 1
+unit(Exponential(8))   == 1
 ```
 """
-Unitful.unit(d::D) where {D <: Distribution} = hasfield(D, :unit) ? d.unit
-                                                                  : oneunit(eltype(D))
+Unitful.unit(d::D) where {D <: Distribution} = 
+    hasfield(D, :unit) ? d.unit : oneunit(eltype(D))
 
 """
     dimensionless(x)
