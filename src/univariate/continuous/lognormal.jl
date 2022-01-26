@@ -1,5 +1,5 @@
 """
-    LogNormal(μ,σ)
+    LogNormal(μ, σ, [units])
 
 The *log normal distribution* is the distribution of the exponential of a [`Normal`](@ref) variate: if ``X \\sim \\operatorname{Normal}(\\mu, \\sigma)`` then
 ``\\exp(X) \\sim \\operatorname{LogNormal}(\\mu,\\sigma)``. The probability density function is
@@ -21,31 +21,44 @@ varlogx(d)           # Get the variance of log(X), i.e. σ^2
 stdlogx(d)           # Get the standard deviation of log(X), i.e. σ
 ```
 
+In the used parametrisation, both parameters μ and σ are dimensionless, and can thus not be
+used to specify physical units for the variate. Rather, you can pass a third argument:
+```jldoctest
+julia> using Unitful: mV
+       d = LogNormal(0, 1, mV)
+       mean(d)
+1.6487212707001282 mV
+```
+
 External links
 
 * [Log normal distribution on Wikipedia](http://en.wikipedia.org/wiki/Log-normal_distribution)
 
 """
-struct LogNormal{T<:Real} <: ContinuousUnivariateDistribution
+struct LogNormal{T<:Real,U<:Units} <: ContinuousUnivariateDistribution
     μ::T
     σ::T
-    LogNormal{T}(μ::T, σ::T) where {T} = new{T}(μ, σ)
+    LogNormal{T,U}(μ::T, σ::T) where {T,U} = new{T,U}(μ, σ)
 end
 
-function LogNormal(μ::T, σ::T; check_args::Bool=true) where {T <: Real}
+function LogNormal(μ::T, σ::T, units::Units=NoUnits; check_args::Bool=true) where {T <: Real}
     check_args && @check_args(LogNormal, σ ≥ zero(σ))
-    return LogNormal{T}(μ, σ)
+    return LogNormal{T,typeof(units)}(μ, σ)
 end
 
-LogNormal(μ::Real, σ::Real; check_args::Bool=true) = LogNormal(promote(μ, σ)...; check_args=check_args)
-LogNormal(μ::Integer, σ::Integer; check_args::Bool=true) = LogNormal(float(μ), float(σ); check_args=check_args)
-LogNormal(μ::Real=0.0) = LogNormal(μ, one(μ); check_args=false)
+LogNormal(μ::Real, σ::Real, units::Units=NoUnits; check_args::Bool=true) = LogNormal(promote(μ, σ)..., units; check_args=check_args)
+LogNormal(μ::Integer, σ::Integer, units::Units=NoUnits; check_args::Bool=true) = LogNormal(float(μ), float(σ), units; check_args=check_args)
+LogNormal(μ::Real=0.0, units::Units=NoUnits) = LogNormal(μ, one(μ), units; check_args=false)
 
-@distr_support LogNormal 0.0 Inf
+Base.eltype(::Type{<:LogNormal{T,typeof(NoUnits)}}) where {T<:Real} = T
+Base.eltype(::Type{<:LogNormal{T,U}}) where {T<:Real,U<:Units{N,D}} where {N,D} = Quantity{T,D,U}
+
+minimum(::LogNormal{T,U}) where {T,U} = 0.0 * U()
+maximum(::LogNormal{T,U}) where {T,U} = Inf * U()
 
 #### Conversions
-convert(::Type{LogNormal{T}}, μ::S, σ::S) where {T <: Real, S <: Real} = LogNormal(T(μ), T(σ))
-convert(::Type{LogNormal{T}}, d::LogNormal{S}) where {T <: Real, S <: Real} = LogNormal(T(d.μ), T(d.σ), check_args=false)
+convert(::Type{LogNormal{T}}, μ::S, σ::S) where {T<:Real, S<:Real} = LogNormal(T(μ), T(σ), NoUnits)
+convert(::Type{LogNormal{T,U}}, d::LogNormal{S,U}) where {T<:Real, S<:Real, U<:Units} = LogNormal(T(d.μ), T(d.σ), U(), check_args=false)
 
 #### Parameters
 
@@ -58,20 +71,20 @@ meanlogx(d::LogNormal) = d.μ
 varlogx(d::LogNormal) = abs2(d.σ)
 stdlogx(d::LogNormal) = d.σ
 
-mean(d::LogNormal) = ((μ, σ) = params(d); exp(μ + σ^2/2))
-median(d::LogNormal) = exp(d.μ)
-mode(d::LogNormal) = ((μ, σ) = params(d); exp(μ - σ^2))
+mean(d::LogNormal) = ((μ, σ) = params(d); exp(μ + σ^2/2) * unit(d))
+median(d::LogNormal) = exp(d.μ) * unit(d)
+mode(d::LogNormal) = ((μ, σ) = params(d); exp(μ - σ^2) * unit(d))
 
 function var(d::LogNormal)
     (μ, σ) = params(d)
     σ2 = σ^2
-    (exp(σ2) - 1) * exp(2μ + σ2)
+    (exp(σ2) - 1) * exp(2μ + σ2) * unit(d)^2
 end
 
 function skewness(d::LogNormal)
     σ2 = varlogx(d)
     e = exp(σ2)
-    (e + 2) * sqrt(e - 1)
+    (e + 2) * sqrt(e - 1) * unit(d)
 end
 
 function kurtosis(d::LogNormal)
@@ -80,7 +93,7 @@ function kurtosis(d::LogNormal)
     e2 = e * e
     e3 = e2 * e
     e4 = e3 * e
-    e4 + 2*e3 + 3*e2 - 6
+    (e4 + 2*e3 + 3*e2 - 6) * unit(d)
 end
 
 function entropy(d::LogNormal)
@@ -91,56 +104,56 @@ end
 
 #### Evalution
 
-function pdf(d::LogNormal, x::Real)
+function pdf(d::LogNormal, x::RealQuantity)
     if x ≤ zero(x)
-        logx = log(zero(x))
-        x = one(x)
+        logx = log(zero(x) / unit(d))
+        x = oneunit(x)
     else
-        logx = log(x)
+        logx = log(x / unit(d))
     end
     return pdf(Normal(d.μ, d.σ), logx) / x
 end
 
-function logpdf(d::LogNormal, x::Real)
+function logpdf(d::LogNormal, x::RealQuantity)
     if x ≤ zero(x)
-        logx = log(zero(x))
+        logx = log(zero(x) / unit(d))
         b = zero(logx)
     else
-        logx = log(x)
+        logx = log(x / unit(d))
         b = logx
     end
     return logpdf(Normal(d.μ, d.σ), logx) - b
 end
 
-function cdf(d::LogNormal, x::Real)
-    logx = x ≤ zero(x) ? log(zero(x)) : log(x)
+function cdf(d::LogNormal, x::RealQuantity)
+    logx = x ≤ zero(x) ? log(zero(x) / unit(d)) : log(x / unit(d))
     return cdf(Normal(d.μ, d.σ), logx)
 end
 
-function ccdf(d::LogNormal, x::Real)
-    logx = x ≤ zero(x) ? log(zero(x)) : log(x)
+function ccdf(d::LogNormal, x::RealQuantity)
+    logx = x ≤ zero(x) ? log(zero(x) / unit(d)) : log(x / unit(d))
     return ccdf(Normal(d.μ, d.σ), logx)
-    end
+end
 
-function logcdf(d::LogNormal, x::Real)
-    logx = x ≤ zero(x) ? log(zero(x)) : log(x)
+function logcdf(d::LogNormal, x::RealQuantity)
+    logx = x ≤ zero(x) ? log(zero(x) / unit(d)) : log(x / unit(d))
     return logcdf(Normal(d.μ, d.σ), logx)
 end
 
-function logccdf(d::LogNormal, x::Real)
-    logx = x ≤ zero(x) ? log(zero(x)) : log(x)
+function logccdf(d::LogNormal, x::RealQuantity)
+    logx = x ≤ zero(x) ? log(zero(x) / unit(d)) : log(x / unit(d))
     return logccdf(Normal(d.μ, d.σ), logx)
 end
 
-quantile(d::LogNormal, q::Real) = exp(quantile(Normal(params(d)...), q))
-cquantile(d::LogNormal, q::Real) = exp(cquantile(Normal(params(d)...), q))
-invlogcdf(d::LogNormal, lq::Real) = exp(invlogcdf(Normal(params(d)...), lq))
-invlogccdf(d::LogNormal, lq::Real) = exp(invlogccdf(Normal(params(d)...), lq))
+quantile(d::LogNormal, q::Real) = exp(quantile(Normal(params(d)...), q)) * unit(d)
+cquantile(d::LogNormal, q::Real) = exp(cquantile(Normal(params(d)...), q)) * unit(d)
+invlogcdf(d::LogNormal, lq::Real) = exp(invlogcdf(Normal(params(d)...), lq)) * unit(d)
+invlogccdf(d::LogNormal, lq::Real) = exp(invlogccdf(Normal(params(d)...), lq)) * unit(d)
 
-function gradlogpdf(d::LogNormal, x::Real)
+function gradlogpdf(d::LogNormal, x::RealQuantity)
     outofsupport = x ≤ zero(x)
-    y = outofsupport ? one(x) : x
-    z = (gradlogpdf(Normal(d.μ, d.σ), log(y)) - 1) / y
+    y = outofsupport ? oneunit(x) : x
+    z = (gradlogpdf(Normal(d.μ, d.σ), log(y / unit(d))) - 1) / y
     return outofsupport ? zero(z) : z
 end
 
@@ -150,12 +163,20 @@ end
 
 #### Sampling
 
-rand(rng::AbstractRNG, d::LogNormal) = exp(randn(rng) * d.σ + d.μ)
+rand(rng::AbstractRNG, d::LogNormal) = exp(randn(rng) * d.σ + d.μ) * unit(d)
 
 ## Fitting
 
-function fit_mle(::Type{<:LogNormal}, x::AbstractArray{T}) where T<:Real
-    lx = log.(x)
-    μ, σ = mean_and_std(lx)
-    LogNormal(μ, σ)
-end
+fit_mle(dt::Type{<:LogNormal}, x::AbstractArray{<:Real}) = LogNormal(_ml_params(dt, x)..., NoUnits)
+fit_mle(dt::Type{<:LogNormal}, x::AbstractArray{<:Quantity{<:Real,D,U}}) where {D,U} = LogNormal(_ml_params(dt, ustrip(x))..., U())
+
+_ml_params(::Type{<:LogNormal}, x::AbstractArray{<:Real}) = mean_and_std(log.(x))
+
+
+"""
+    _ml_params(::Type{<:Distribution}, x::AbstractArray)
+
+Calculate the parameters of the given distribution type that make the observations `x` most
+likely.
+"""
+_ml_params(::Type{<:Distribution}, x::AbstractArray)

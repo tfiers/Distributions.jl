@@ -34,14 +34,14 @@ end
 Exponential(θ::Integer; check_args::Bool=true) = Exponential(float(θ); check_args=check_args)
 Exponential() = Exponential{Float64}(1.0)
 
-Base.eltype(::Type{Exponential{T}}) where {T} = T
+Base.eltype(::Type{<:Exponential{T}}) where {T} = T
 
 minimum(d::Exponential) = 0 * unit(d)
 maximum(d::Exponential) = Inf * unit(d)
 
 ### Conversions
-convert(::Type{Exponential{T}}, θ::S) where {T <: RealQuantity, S <: RealQuantity} = Exponential(T(θ))
-convert(::Type{Exponential{T}}, d::Exponential{S}) where {T <: RealQuantity, S <: RealQuantity} = Exponential(T(d.θ), check_args=false)
+convert(::Type{Exponential{T}}, θ::S) where {T<:RealQuantity, S<:RealQuantity} = Exponential(T(θ))
+convert(::Type{Exponential{T}}, d::Exponential{S}) where {T<:RealQuantity, S<:RealQuantity} = Exponential(T(d.θ), check_args=false)
 
 #### Parameters
 
@@ -61,16 +61,16 @@ var(d::Exponential) = d.θ^2
 skewness(::Exponential{T}) where {T} = T(2)
 kurtosis(::Exponential{T}) where {T} = T(6)
 
-entropy(d::Exponential{T}) where {T} = one(T) + log(dimensionless(d.θ / unit(d)))
+entropy(d::Exponential{T}) where {T} = one(T) + log(d.θ/unit(d))
 
 function kldivergence(p::Exponential, q::Exponential)
     λq_over_λp = scale(q) / scale(p)
-    return -logmxp1(dimensionless(λq_over_λp))
+    return -logmxp1(λq_over_λp)
 end
 
 #### Evaluation
 
-zval(d::Exponential, x::RealQuantity) = max(dimensionless(x / d.θ), 0)
+zval(d::Exponential, x::RealQuantity) = max(x / d.θ, 0)
 xval(d::Exponential, z::Real) = z * d.θ
 
 function pdf(d::Exponential, x::RealQuantity)
@@ -80,7 +80,7 @@ function pdf(d::Exponential, x::RealQuantity)
 end
 function logpdf(d::Exponential, x::RealQuantity)
     λ = rate(d)
-    z = log(dimensionless(λ * unit(d))) - dimensionless(λ * x)
+    z = log(λ * unit(d)) - λ * x
     return x < zero(x) ? oftype(z, -Inf) : z
 end
 
@@ -96,8 +96,8 @@ invlogccdf(d::Exponential, lp::Real) = -xval(d, lp)
 
 gradlogpdf(d::Exponential, x::RealQuantity) = x > zero(x) ? -rate(d) : 0/unit(d)
 
-mgf(d::Exponential, t::RealQuantity) = 1/(1 - dimensionless(t * scale(d)))
-cf(d::Exponential, t::RealQuantity) = 1/(1 - im * dimensionless(t * scale(d)))
+mgf(d::Exponential, t::RealQuantity) = 1/(1 - t * scale(d))
+cf(d::Exponential, t::RealQuantity) = 1/(1 - t * im * scale(d))
 
 
 #### Sampling
