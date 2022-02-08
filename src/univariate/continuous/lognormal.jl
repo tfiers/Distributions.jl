@@ -21,8 +21,8 @@ varlogx(d)           # Get the variance of log(X), i.e. σ^2
 stdlogx(d)           # Get the standard deviation of log(X), i.e. σ
 ```
 
-In the used parametrisation, both parameters μ and σ are dimensionless, and can thus not be
-used to specify physical units for the variate. Rather, you can pass a third argument:
+Both parameters μ and σ are dimensionless, and can thus not be used to specify physical
+units for the variate. Rather, you can pass a third argument for this purpose:
 ```jldoctest
 julia> using Unitful: mV
        d = LogNormal(0, 1, mV)
